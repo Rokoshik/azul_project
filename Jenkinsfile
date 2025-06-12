@@ -2,11 +2,17 @@ pipeline {
     agent any
 
     environment {
-        VENV_DIR = './venv'  // Local to Jenkins workspace
+        VENV_DIR = "${WORKSPACE}/venv"
     }
 
     stages {
-        stage('Clone & Setup Python Environment') {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+
+        stage('Create & Activate Python venv') {
             steps {
                 sh '''
                     python3 -m venv ${VENV_DIR}
