@@ -9,12 +9,23 @@ pipeline {
     }
 
     stages {
+        stage('Clean Workspace') {
+            steps {
+                cleanWs()
+            }
+        }
+        
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
         stage('Setup Python Environment') {
             steps {
                 script {
-                    if (!fileExists("${VENV_DIR}/bin/activate")) {
-                        sh 'python3 -m venv venv'
-                    }
+                    // Force recreate virtualenv every build for clean environment
+                    sh 'python3 -m venv venv'
                 }
             }
         }
