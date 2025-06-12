@@ -3,11 +3,15 @@ pipeline {
 
     stages {
         stage('Clean Workspace') {
-            steps { cleanWs() }
+            steps {
+                cleanWs()
+            }
         }
 
         stage('Checkout') {
-            steps { checkout scm }
+            steps {
+                checkout scm
+            }
         }
 
         stage('Setup Python Environment') {
@@ -31,8 +35,13 @@ pipeline {
         stage('Run Process Reporter') {
             steps {
                 sh '''
-                    ./venv/bin/python azul/process_reporter.py --output-format csv --filename my_report
+                    ./venv/bin/python azul/process_reporter.py --output-format csv --output my_report
                 '''
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'my_report.csv', allowEmptyArchive: true
+                }
             }
         }
 
@@ -46,6 +55,7 @@ pipeline {
             post {
                 always {
                     archiveArtifacts artifacts: 'tests/reports/tests_output.log', allowEmptyArchive: true
+                    // junit 'tests/reports/*.xml' // optional: enable if you generate XML test reports
                 }
             }
         }
