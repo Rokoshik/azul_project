@@ -3,9 +3,9 @@ pipeline {
 
     environment {
         VENV_DIR = 'venv'
-        PYTHON = "${VENV_DIR}/bin/python"
-        PIP = "${VENV_DIR}/bin/pip"
-        PYTEST = "${VENV_DIR}/bin/pytest"
+        PYTHON = "${env.WORKSPACE}/${VENV_DIR}/bin/python"
+        PIP = "${env.WORKSPACE}/${VENV_DIR}/bin/pip"
+        PYTEST = "${env.WORKSPACE}/${VENV_DIR}/bin/pytest"
     }
 
     stages {
@@ -23,8 +23,7 @@ pipeline {
 
         stage('Setup Python Environment') {
             steps {
-                script {
-                    // Force recreate virtualenv every build for clean environment
+                dir("${env.WORKSPACE}") {
                     sh 'python3 -m venv venv'
                 }
             }
@@ -32,18 +31,22 @@ pipeline {
 
         stage('Install Dependencies') {
             steps {
-                sh '''
-                    ${PIP} install --upgrade pip
-                    ${PIP} install -r requirements.txt
-                '''
+                dir("${env.WORKSPACE}") {
+                    sh '''
+                        ${PIP} install --upgrade pip
+                        ${PIP} install -r requirements.txt
+                    '''
+                }
             }
         }
 
         stage('Run Tests') {
             steps {
-                sh '''
-                    ${PYTEST} -v azul_project/tests --junitxml=report.xml
-                '''
+                dir("${env.WORKSPACE}") {
+                    sh '''
+                        ${PYTEST} -v azul_project/tests --junitxml=report.xml
+                    '''
+                }
             }
         }
     }
