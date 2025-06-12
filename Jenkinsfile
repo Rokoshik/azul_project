@@ -3,15 +3,11 @@ pipeline {
 
     stages {
         stage('Clean Workspace') {
-            steps {
-                cleanWs()
-            }
+            steps { cleanWs() }
         }
 
         stage('Checkout') {
-            steps {
-                checkout scm
-            }
+            steps { checkout scm }
         }
 
         stage('Setup Python Environment') {
@@ -32,9 +28,16 @@ pipeline {
             }
         }
 
+        stage('Run Process Reporter') {
+            steps {
+                sh '''
+                    ./venv/bin/python azul/process_reporter.py --output-format csv --filename my_report
+                '''
+            }
+        }
+
         stage('Run Tests') {
             steps {
-                // Assuming you have automated tests in tests/ directory
                 sh '''
                     mkdir -p tests/reports
                     ./venv/bin/python -m unittest discover -s tests -p '*_test.py' -v > tests/reports/tests_output.log || true
@@ -43,8 +46,6 @@ pipeline {
             post {
                 always {
                     archiveArtifacts artifacts: 'tests/reports/tests_output.log', allowEmptyArchive: true
-                    // Uncomment and adjust if you generate JUnit XML reports
-                    // junit 'tests/reports/*.xml'
                 }
             }
         }
