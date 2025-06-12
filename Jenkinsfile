@@ -5,10 +5,20 @@ pipeline {
         VENV_DIR = "${WORKSPACE}/venv"
     }
 
+    options {
+        skipDefaultCheckout(true) // prevents automatic Git checkout before cleanWs
+    }
+
     stages {
         stage('Clean Workspace') {
             steps {
                 cleanWs()
+            }
+        }
+
+        stage('Checkout Repo') {
+            steps {
+                checkout scm
             }
         }
 
