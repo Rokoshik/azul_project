@@ -1,8 +1,10 @@
 pipeline {
     agent any
+
     environment {
-        VENV_DIR = 'venv'
+        VENV_DIR = './venv'  // Local to Jenkins workspace
     }
+
     stages {
         stage('Clone & Setup Python Environment') {
             steps {
@@ -14,6 +16,7 @@ pipeline {
                 '''
             }
         }
+
         stage('Run Tests') {
             steps {
                 sh '''
@@ -22,6 +25,7 @@ pipeline {
                 '''
             }
         }
+
         stage('Run CLI Tool') {
             steps {
                 sh '''
@@ -30,6 +34,7 @@ pipeline {
                 '''
             }
         }
+
         stage('Archive Report') {
             steps {
                 archiveArtifacts artifacts: 'test_report.json', fingerprint: true
