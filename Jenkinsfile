@@ -1,71 +1,81 @@
 pipeline {
     agent any
-    environment {
-        VENV_DIR = "${env.WORKSPACE}/venv"
-    }
+
     stages {
         stage('Clean Workspace') {
             steps {
                 cleanWs()
             }
         }
+
         stage('Checkout Repo') {
             steps {
-                checkout([
-                    $class: 'GitSCM',
-                    branches: [[name: '*/main']],
-                    userRemoteConfigs: [[
-                        url: 'https://github.com/Rokoshik/azul_project.git',
-                        credentialsId: 'github-private-key'
-                    ]]
-                ])
+                checkout scm
             }
         }
+
         stage('Create & Activate Python venv') {
             steps {
                 script {
                     sh '''
-                        unset VIRTUAL_ENV
-                        unset PYTHONHOME
-                        unset PYTHONPATH
-                        export PATH=$(echo $PATH | tr ':' '\\n' | grep -v '/home/kris/azul_project/venv/bin' | paste -sd ':' -)
-                        rm -rf ~/.cache/pip ~/.cache/pipenv ~/.local/share/virtualenvs/*
+                    # Unset any previous Python virtualenv environment variables
+                    unset VIRTUAL_ENV
+                    unset PYTHONPATH
+                    unset PYTHONHOME
 
-                        python3 -m venv "${VENV_DIR}"
+                    # Remove any existing venv in Jenkins workspace
+                    rm -rf ./venv
 
-                        . "${VENV_DIR}/bin/activate"
+                    # Clean PATH from any previous venvs, especially /home/kris/azul_project/venv/bin
+                    export PATH=$(echo $PATH | tr ':' '\\n' | grep -v '/home/kris/azul_project/venv/bin' | paste -sd ':' -)
 
-                        "${VENV_DIR}/bin/pip" install --upgrade pip
-                        "${VENV_DIR}/bin/pip" install -r requirements.txt
+                    # Optional: Remove pip caches to avoid stale package info
+                    rm -rf /var/lib/jenkins/.cache/pip /var/lib/jenkins/.cache/pipenv /var/lib/jenkins/.local/share/virtualenvs/*
+
+                    # Create new virtual environment inside workspace
+                    python3 -m venv ./venv
+
+                    # Activate the new virtual environment
+                    . ./venv/bin/activate
+
+                    # Print info for debugging
+                    echo "VIRTUAL_ENV=$VIRTUAL_ENV"
+                    which python
+                    which pip
+                    echo "PATH=$PATH"
+
+                    # Upgrade pip explicitly inside this virtualenv
+                    ./venv/bin/pip install --upgrade pip
                     '''
                 }
             }
         }
+
         stage('Run Tests') {
             steps {
-                sh '''
-                    . "${VENV_DIR}/bin/activate"
-                    pytest tests/
-                '''
+                script {
+                    sh '''
+                    . ./venv/bin/activate
+                    # Run your test commands here, for example:
+                    pytest
+                    '''
+                }
             }
         }
-        stage('Run CLI Tool') {
-            steps {
-                sh '''
-                    . "${VENV_DIR}/bin/activate"
-                    python cli_tool.py
-                '''
-            }
-        }
-        stage('Archive Report') {
-            steps {
-                archiveArtifacts artifacts: '**/test-report.xml', allowEmptyArchive: true
-            }
-        }
+
+        // Add further stages like 'Run CLI Tool', 'Archive Report' as needed
     }
+
     post {
+        always {
+            echo 'Cleaning up workspace...'
+            cleanWs()
+        }
+        success {
+            echo 'Build succeeded!'
+        }
         failure {
-            echo 'Build failed. Check the logs above for details.'
+            echo 'Build failed. Please check logs.'
         }
     }
 }
