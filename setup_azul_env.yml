@@ -1,0 +1,27 @@
+---
+- name: Setup Azul Project Environment
+  hosts: localhost
+  become: yes
+  tasks:
+    - name: Ensure python3-venv is installed
+      apt:
+        name: python3-venv
+        state: present
+        update_cache: yes
+
+    - name: Create virtual environment if not exists
+      command: python3 -m venv venv
+      args:
+        creates: venv
+
+    - name: Install requirements inside venv
+      pip:
+        requirements: requirements.txt
+        virtualenv: ./venv
+        virtualenv_python: python3
+
+    - name: Install ansible in venv
+      pip:
+        name: ansible
+        virtualenv: ./venv
+        virtualenv_python: python3
