@@ -2,15 +2,15 @@ pipeline {
     agent any
 
     stages {
-        stage('Clean Workspace') {
+        stage('Checkout SCM') {
             steps {
-                cleanWs()
+                checkout scm
             }
         }
 
-        stage('Checkout Repo') {
+        stage('Clean Workspace') {
             steps {
-                checkout scm
+                cleanWs()
             }
         }
 
@@ -18,34 +18,30 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    # Unset any previous Python virtualenv environment variables
+                    # Clean any existing venv
+                    rm -rf ./venv
+
+                    # Unset env vars that might interfere
                     unset VIRTUAL_ENV
                     unset PYTHONPATH
                     unset PYTHONHOME
 
-                    # Remove any existing venv in Jenkins workspace
-                    rm -rf ./venv
-
-                    # Clean PATH from any previous venvs, especially /home/kris/azul_project/venv/bin
-                    export PATH=$(echo $PATH | tr ':' '\\n' | grep -v '/home/kris/azul_project/venv/bin' | paste -sd ':' -)
-
-                    # Optional: Remove pip caches to avoid stale package info
-                    rm -rf /var/lib/jenkins/.cache/pip /var/lib/jenkins/.cache/pipenv /var/lib/jenkins/.local/share/virtualenvs/*
-
-                    # Create new virtual environment inside workspace
+                    # Create a fresh virtual environment
                     python3 -m venv ./venv
 
-                    # Activate the new virtual environment
+                    # Activate the virtual environment
                     . ./venv/bin/activate
 
-                    # Print info for debugging
-                    echo "VIRTUAL_ENV=$VIRTUAL_ENV"
-                    which python
-                    which pip
-                    echo "PATH=$PATH"
-
-                    # Upgrade pip explicitly inside this virtualenv
+                    # Upgrade pip to latest
                     ./venv/bin/pip install --upgrade pip
+
+                    # Install dependencies if requirements.txt exists
+                    if [ -f requirements.txt ]; then
+                      ./venv/bin/pip install -r requirements.txt
+                    fi
+
+                    # Ensure pytest is installed
+                    ./venv/bin/pip install pytest
                     '''
                 }
             }
@@ -55,15 +51,15 @@ pipeline {
             steps {
                 script {
                     sh '''
+                    # Activate venv and run pytest
                     . ./venv/bin/activate
-                    # Run your test commands here, for example:
                     pytest
                     '''
                 }
             }
         }
 
-        // Add further stages like 'Run CLI Tool', 'Archive Report' as needed
+        // Optional: archive test reports, add other stages here
     }
 
     post {
@@ -71,11 +67,11 @@ pipeline {
             echo 'Cleaning up workspace...'
             cleanWs()
         }
+        failure {
+            echo 'Build failed. Check the logs above.'
+        }
         success {
             echo 'Build succeeded!'
-        }
-        failure {
-            echo 'Build failed. Please check logs.'
         }
     }
 }
