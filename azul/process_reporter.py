@@ -10,7 +10,7 @@ def get_processes():
         try:
             info = proc.info
             info['memory_usage'] = round(
-                info['memory_info'].rss / (1024 * 1024), 2)  # MB
+                info['memory_info'].rss / (1024 * 1024), 2)  # in MB
             del info['memory_info']
             processes.append(info)
         except (psutil.NoSuchProcess, psutil.AccessDenied):
@@ -19,10 +19,6 @@ def get_processes():
 
 
 def save_report(data, output_format='csv', filename='azul_process_report'):
-    if not data:
-        print("No process data to save.")
-        return
-
     if output_format == 'csv':
         with open(f"{filename}.csv", 'w', newline='', encoding='utf-8') as f:
             writer = csv.DictWriter(f, fieldnames=data[0].keys())
@@ -35,19 +31,16 @@ def save_report(data, output_format='csv', filename='azul_process_report'):
         raise ValueError("Format must be 'csv' or 'json'")
 
 
-def main():
+if __name__ == '__main__':
     parser = argparse.ArgumentParser(
-        description="Generate a detailed report of running processes.")
-    parser.add_argument('-f', '--format', choices=['csv', 'json'], default='csv',
-                        help='Output report format (default: csv)')
+        description='Generate a report of running processes.')
+    parser.add_argument('-f', '--output-format',
+                        choices=['csv', 'json'], default='csv', help='Output format: csv or json')
     parser.add_argument('-o', '--output', default='azul_process_report',
-                        help='Output filename without extension (default: azul_process_report)')
+                        help='Output filename (without extension)')
+
     args = parser.parse_args()
 
     processes = get_processes()
-    save_report(processes, output_format=args.format, filename=args.output)
-    print(f"Report saved to {args.output}.{args.format}")
-
-
-if __name__ == '__main__':
-    main()
+    save_report(processes, output_format=args.output_format,
+                filename=args.output)
