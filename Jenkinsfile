@@ -28,15 +28,20 @@ pipeline {
                 sh '''
                     ./venv/bin/pip install --upgrade pip
                     ./venv/bin/pip install -r requirements.txt
+                    ./venv/bin/pip install flake8 pytest
                 '''
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                sh './venv/bin/flake8 azul/'
             }
         }
 
         stage('Run Process Reporter') {
             steps {
-                sh '''
-                    ./venv/bin/python azul/process_reporter.py --output-format csv --output my_report
-                '''
+                sh './venv/bin/python azul/process_reporter.py --output-format csv --output my_report.csv'
             }
             post {
                 always {
@@ -49,13 +54,13 @@ pipeline {
             steps {
                 sh '''
                     mkdir -p tests/reports
-                    ./venv/bin/python -m unittest discover -s tests -p '*_test.py' -v > tests/reports/tests_output.log || true
+                    ./venv/bin/pytest tests/ --junitxml=tests/reports/results.xml || true
                 '''
             }
             post {
                 always {
-                    archiveArtifacts artifacts: 'tests/reports/tests_output.log', allowEmptyArchive: true
-                    // junit 'tests/reports/*.xml' // optional: enable if you generate XML test reports
+                    archiveArtifacts artifacts: 'tests/reports/results.xml', allowEmptyArchive: true
+                    junit 'tests/reports/results.xml'
                 }
             }
         }
