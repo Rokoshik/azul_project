@@ -18,29 +18,14 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    # Clean any existing venv
+                    set -e
                     rm -rf ./venv
-
-                    # Unset env vars that might interfere
-                    unset VIRTUAL_ENV
-                    unset PYTHONPATH
-                    unset PYTHONHOME
-
-                    # Create a fresh virtual environment
+                    unset VIRTUAL_ENV PYTHONPATH PYTHONHOME
                     python3 -m venv ./venv
-
-                    # Activate the virtual environment
-                    . ./venv/bin/activate
-
-                    # Upgrade pip to latest
                     ./venv/bin/pip install --upgrade pip
-
-                    # Install dependencies if requirements.txt exists
                     if [ -f requirements.txt ]; then
                       ./venv/bin/pip install -r requirements.txt
                     fi
-
-                    # Ensure pytest is installed
                     ./venv/bin/pip install pytest
                     '''
                 }
@@ -51,15 +36,18 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    # Activate venv and run pytest
-                    . ./venv/bin/activate
-                    pytest
+                    set -e
+                    ./venv/bin/pytest --junitxml=report.xml
                     '''
                 }
             }
         }
 
-        // Optional: archive test reports, add other stages here
+        stage('Archive Test Results') {
+            steps {
+                junit 'report.xml'
+            }
+        }
     }
 
     post {
