@@ -1,0 +1,68 @@
+pipeline {
+    agent any
+
+    environment {
+        VENV_PATH = "venv\\Scripts"
+        PYTHON = "venv\\Scripts\\python.exe"
+        PIP = "venv\\Scripts\\pip.exe"
+    }
+
+    stages {
+        stage('Clean Workspace') {
+            steps {
+                deleteDir()
+            }
+        }
+
+        stage('Checkout') {
+            steps {
+                checkout scm
+            }
+        }
+
+        stage('Setup Python Environment') {
+            steps {
+                bat 'rmdir /S /Q venv || exit 0'
+                bat 'python -m venv venv'
+            }
+        }
+
+        stage('Install Dependencies') {
+            steps {
+                bat '%PIP% install --upgrade pip'
+                bat '%PIP% install -r requirements.txt'
+                bat '%PIP% install flake8 pytest'
+            }
+        }
+
+        stage('Lint') {
+            steps {
+                bat '%VENV_PATH%\\flake8 azul'
+            }
+        }
+
+        stage('Run Process Reporter') {
+            steps {
+                bat '%PYTHON% azul\\process_reporter.py --output-format csv --output my_report.csv'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'my_report.csv', allowEmptyArchive: true
+                }
+            }
+        }
+
+        stage('Run Tests') {
+            steps {
+                bat 'mkdir tests\\reports'
+                bat '%VENV_PATH%\\pytest tests --junitxml=tests\\reports\\results.xml || exit 0'
+            }
+            post {
+                always {
+                    archiveArtifacts artifacts: 'tests/reports/results.xml', allowEmptyArchive: true
+                    junit 'tests/reports/results.xml'
+                }
+            }
+        }
+    }
+}
