@@ -32,7 +32,7 @@ def test_generate_csv_report(tmp_path):
     assert code == 0
     assert output_file.exists()
 
-    # Check CSV content has expected columns
+    # Checking if CSV content has expected columns
     with open(output_file, newline='') as f:
         reader = csv.DictReader(f)
         headers = reader.fieldnames
